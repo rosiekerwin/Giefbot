@@ -5,6 +5,9 @@ import tensorflow as tf
 import gym
 import numpy as np
 
+def convert_to_grayscale(rgb):
+    return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+
 def main():
     env = gym.make('Asteroids-v0')
     observation = env.reset()
@@ -12,17 +15,23 @@ def main():
     last4obs = []
     numSavedInstances = 0
     
-    for _ in range(1000):
+    for i in range(1000):
             env.render()
-            action = magic()
+            #action = magic()
             observation, reward, done, info = env.step(env.action_space.sample()) # take a random action
+            observation2 = convert_to_grayscale(observation)
+            
+            
      
 
 
 
 def magic(tSet):
+    l1Neurons = 33600
     #build attr tensor
     x = tf.placeholder(tf.float32, shape = [210, 160, 3])
+    
+    actions = tf.Variable(tf.truncated_normal([l1Neurons, 5], stddev = 0.1))
     
     #create hidden layer
     W_hidden = tf.Variable(tf.truncated_normal([numAttr, NUM_NEURONS], stddev = 0.1))
