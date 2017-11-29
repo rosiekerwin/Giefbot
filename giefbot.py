@@ -1,9 +1,28 @@
 # giefbot.py - Rosie Kerwin, Joshua Rappaport, Manickam Manickam
 # 11.28.2017
 
-def network(train, test, numAttr, numLabels, NUM_NEURONS, LEARNING_RATE, iterations):
+import tensorflow as tf
+import gym
+import numpy as np
+
+def main():
+    env = gym.make('Asteroids-v0')
+    observation = env.reset()
+    env.render()
+    last4obs = []
+    numSavedInstances = 0
+    
+    for _ in range(1000):
+            env.render()
+            action = magic()
+            observation, reward, done, info = env.step(env.action_space.sample()) # take a random action
+     
+
+
+
+def magic(tSet):
     #build attr tensor
-    x = tf.placeholder(tf.float32, shape = [None, numAttr])
+    x = tf.placeholder(tf.float32, shape = [210, 160, 3])
     
     #create hidden layer
     W_hidden = tf.Variable(tf.truncated_normal([numAttr, NUM_NEURONS], stddev = 0.1))
@@ -56,3 +75,8 @@ def network(train, test, numAttr, numLabels, NUM_NEURONS, LEARNING_RATE, iterati
             getAccs(p, test)
     p = sess.run(predict, feed_dict={x: test[0]})
     return p, test
+
+
+
+if (__name__ == "__main__"):
+        main()
