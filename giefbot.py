@@ -47,29 +47,33 @@ def bias_variable(shape):
   initial = tf.constant(0.1, shape=shape)
   return tf.Variable(initial)
 
-def conv2d(x, W):
-  return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+def conv2d(x, W, st):
+  return tf.nn.conv2d(x, W, strides=[1, st, st, 1], padding='SAME')
 
 
 def magic(reward,action,prev_obs,curr_obs):
-    l1Neurons = 33600
+    #l1Neurons = 33600
     #build attr tensor
     x = tf.placeholder(tf.float32, shape = [84, 84, 4])
 
     actions = tf.Variable(tf.truncated_normal([l1Neurons, 5], stddev = 0.1))
 
-    W_conv1 = weight_variable([8,8,1,32])
+    W_conv1 = weight_variable([8,8,4,32])
     b_conv1 = bias_variable([32])
-    x_image = tf.reshape(x,[-1,8,8,1])
-    h_conv1 = tf.nn.relu(conv2d(x_image,W_conv1)+b_conv1)
+    x_image = tf.reshape(x,[-1,84,84,4])
+    h_conv1 = tf.nn.relu(conv2d(x_image,W_conv1, 4)+b_conv1)
 
     W_conv2 = weight_variable([4, 4, 32, 64])
     b_conv2 = bias_variable([64])
-    h_conv2 = tf.nn.relu(conv2d(h_conv1, W_conv2) + b_conv2)
+    h_conv2 = tf.nn.relu(conv2d(h_conv1, W_conv2, 2) + b_conv2)
 
     W_conv3 = weight_variable([3, 3, 64, 64])
     b_conv3 = bias_variable([64])
-    h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3) + b_conv3)
+    h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3, 1) + b_conv3)
+    print(h_conv3.get_shape)
+    conv_out = tf.reshape(h_conv3, [-1, 84, 84, 64])
+    
+    
     
     # w_connected = weight_variable()
     # b_connected = bias_variable([512])
