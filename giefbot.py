@@ -83,9 +83,16 @@ def magic(reward,action,prev_obs,curr_obs):
     h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3, 1) + b_conv3)
     print(h_conv3.get_shape)
     conv_out = tf.reshape(h_conv3, [-1, 84, 84, 64])
-    
-    
-    
+
+    w_hidden = weight_variable([451584,512])
+    b_hidden = bias_variable([512])
+    hidden_net = tf.matmul(conv_out,w_hidden)+b_hidden
+    hidden_out = tf.nn.relu(hidden_net)
+
+    w_output = weight_variable([512,6])
+    b_output = bias_variable([6])
+    output_net = tf._mat_mul(hidden_out,w_output)+b_output
+
     # w_connected = weight_variable()
     # b_connected = bias_variable([512])
     # h_connected = tf.nn.relu()
