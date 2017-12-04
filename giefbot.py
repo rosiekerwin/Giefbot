@@ -4,6 +4,7 @@
 import tensorflow as tf
 import gym
 import numpy as np
+import random as rand
 #import cv2
 
 # NOTE: RETURNS A SHAPE OF 84x84.
@@ -20,6 +21,7 @@ def convert_to_small_and_grayscale(rgb):
     return ret
 
 def main():
+    rand.seed()
     env = gym.make('Asteroids-v0')
     observation = env.reset()
     #observation = downsample(observation)
@@ -29,19 +31,21 @@ def main():
     prev_obs = []
     curr_obs = []
     D = []
-    
+    sess = tf.Session()
     for i in range(4):
         observation, reward, done, info = env.step(action)  # pass in 0 for action
         observation = convert_to_small_and_grayscale(observation)
         prev_obs = curr_obs
         curr_obs = obsUpdate(curr_obs,observation)
-        sess = tf.Session()
         e = [reward, action, prev_obs, curr_obs]
         D.append(e)
         action = 0
+    initialize(sess)
    
     for i in range(1000):
-        
+        if (len(D) > 256):
+            D.pop()
+        action = magic(curr_obs, sess) #change this to just take in curr_obs, sess, and False
         env.render()
         observation, reward, done, info = env.step(action) # take a random action
         observation = convert_to_small_and_grayscale(observation)
@@ -49,11 +53,25 @@ def main():
         D.append(e)
         prev_obs = curr_obs
         curr_obs = obsUpdate(curr_obs,observation)
-        action = magic(reward,action,prev_obs,curr_obs, sess, False)
-        #print(len(observation))
-        #observation = downsample(observation)
+        update_q_function(D, sess)
             
-     
+def update_q_function(D, sess):
+    gamma = 0.99
+    T = 4
+    indexes = []
+    for _ in range(T):
+        indexes.append(rand.randrange(len(D)))
+    
+    for e in indexes:
+        rt = e[0]
+        at = e[1]
+        curr_obs = e[2]
+        future_obs = e[3]
+        nQ = sess.run(x, feed_dict={x: future_obs})
+        m = [0]*6
+        m[at] = 1
+        sess.run(trainer, feed_dict={mask: m, reward: rt, currentQ: curr_obs, nextQ: future_obs})
+
 def obsUpdate(curr_obs,new_obs):
     if len(curr_obs) > 3:
         curr_obs.pop()
@@ -64,19 +82,15 @@ def weight_variable(shape):
   initial = tf.truncated_normal(shape, stddev=0.1)
   return tf.Variable(initial)
 
-def bias_variable(shape):
-  initial = tf.constant(0.1, shape=shape)
-  return tf.Variable(initial)
+def bias_variable(rshape):
+  return tf.Variable(tf.constant(0.1, shape=rshape))
 
 def conv2d(x, W, st):
   return tf.nn.conv2d(x, W, strides=[1, st, st, 1], padding='SAME')
 
-def magic(reward,action,prev_obs,curr_obs, sess, t):
-    #l1Neurons = 33600
-    #build attr tensor
-    x = tf.placeholder(tf.float32, shape = [84, 84, 4])
-
-    #actions = tf.Variable(tf.truncated_normal([l1Neurons, 5], stddev = 0.1))
+def initialize(sess):
+    fx = tf.placeholder(tf.float32, shape = [4,84,84])
+    x = tf.reshape(fx, [84, 84, 4])
 
     W_conv1 = weight_variable([8,8,4,32])
     b_conv1 = bias_variable([32])
@@ -90,9 +104,7 @@ def magic(reward,action,prev_obs,curr_obs, sess, t):
     W_conv3 = weight_variable([3, 3, 64, 64])
     b_conv3 = bias_variable([64])
     h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3, 1) + b_conv3)
-    print(h_conv3.get_shape)
     conv_out = tf.reshape(h_conv3, [-1, 11*11*64]) # this is the line that was giving us issues.
-    print(conv_out.get_shape)
 
     w_hidden = weight_variable([7744,512])
     b_hidden = bias_variable([512])
@@ -102,70 +114,20 @@ def magic(reward,action,prev_obs,curr_obs, sess, t):
     w_output = weight_variable([512,6])
     b_output = bias_variable([6])
     output_net = tf.matmul(hidden_out,w_output)+b_output
-        
-    if t:
-        sess.run(tf.global_variables_initializer())
-    var = sess.run(output_net, feed_dict={x: curr_obs})
+    
+    currentQ = tf.placeholder(tf.float32, [6])
+    reward = tf.placeholder(tf.float32, [6])
+    nextQ = tf.placeholder(tf.float32, [6])
+    mask = tf.placeholder(tf.float32, [6])
+    cost = (mask*reward+mask*nextQ-mask*currentQ)**2
+    trainer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
+    sess.run(tf.global_variables_initializer())
+
+def magic(curr_obs, sess):
+    var, _ = sess.run(output_net, feed_dict={fx: curr_obs})
     prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
     print(prediction_index)
-    return predicted_index
-
-    # w_connected = weight_variable()
-    # b_connected = bias_variable([512])
-    # h_connected = tf.nn.relu()
-
-
-    # #create hidden layer
-    # W_hidden = tf.Variable(tf.truncated_normal([numAttr, NUM_NEURONS], stddev = 0.1))
-    # b_hidden = tf.Variable(tf.constant(0.1, shape=[NUM_NEURONS]))
-    #
-    # net_hidden = tf.matmul(x, W_hidden) + b_hidden
-    # out_hidden = tf.sigmoid(net_hidden)
-    #
-    # #create output layer
-    # W_output = tf.Variable(tf.truncated_normal([NUM_NEURONS, numLabels], stddev = 0.1))
-    # b_output = tf.Variable(tf.constant(0.1, shape=[numLabels]))
-    #
-    # net_output = tf.matmul(out_hidden, W_output) + b_output
-    #
-    # out_hidden = tf.sigmoid(out_hidden)
-    #
-    # #create true labels
-    # y = tf.placeholder(tf.float32, shape=[None, numLabels])
-    #
-    # #create training
-    # if numLabels == 1:
-    #     predict = tf.sigmoid(net_output)
-    # else:
-    #     predict = tf.nn.softmax(net_output)
-    #
-    # #create training
-    # if numLabels == 1:
-    #     cost = tf.reduce_sum(0.5 * (y-predict) * (y-predict))
-    # else:
-    #     cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=net_output))
-    #
-    # trainer = tf.train.AdamOptimizer(LEARNING_RATE).minimize(cost) #backprop
-    #
-    # #start tf session
-    # sess = tf.Session()
-    # init = tf.initialize_all_variables().run(session=sess)
-    #
-    # #train
-    # step = 0
-    # maxSteps = iterations
-    #
-    # while (step < maxSteps):
-    #     step += 1
-    #     _, p = sess.run([trainer, predict], feed_dict={x: train[0], y: train[1]})
-    #     t = sess.run(predict, feed_dict={x: test[0]})
-    #     if step % 50 == 0:
-    #         print "training"
-    #         getAccs(p, train)
-    #         print "test"
-    #         getAccs(p, test)
-    # p = sess.run(predict, feed_dict={x: test[0]})
-    # return p, test
+    return predicted_index,
 
 
 
