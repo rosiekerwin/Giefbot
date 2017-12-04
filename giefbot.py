@@ -6,8 +6,18 @@ import gym
 import numpy as np
 #import cv2
 
-def convert_to_grayscale(rgb):
-    return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+# NOTE: RETURNS A SHAPE OF 84x84.
+def convert_to_small_and_grayscale(rgb):
+    ret = np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
+    shape = ret.shape
+    horiz = range(8, shape[0], 2)
+    vert = range(8, shape[1], 2)
+    top = range(0, 25)
+    ret = np.delete(ret, vert, 1)
+    ret = np.delete(ret, horiz, 0)
+    ret = np.delete(ret, top, 0)
+    print(ret.shape)
+    return ret
 
 def main():
     env = gym.make('Asteroids-v0')
@@ -29,7 +39,8 @@ def main():
         # action = magic(reward,action,prev_obs,curr_obs)
         env.render()
         observation, reward, done, info = env.step(action) # take a random action
-        observation = convert_to_grayscale(observation)
+        observation = convert_to_small_and_grayscale(observation)
+        #print(len(observation))
         #observation = downsample(observation)
             
      
