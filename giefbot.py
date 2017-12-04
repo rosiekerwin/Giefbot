@@ -36,7 +36,7 @@ def main():
     for i in range(1000):
         prev_obs = curr_obs
         curr_obs = obsUpdate(curr_obs,observation)
-        # action = magic(reward,action,prev_obs,curr_obs)
+        action = magic(reward,action,prev_obs,curr_obs)
         env.render()
         observation, reward, done, info = env.step(action) # take a random action
         observation = convert_to_small_and_grayscale(observation)
@@ -67,7 +67,7 @@ def magic(reward,action,prev_obs,curr_obs):
     #build attr tensor
     x = tf.placeholder(tf.float32, shape = [84, 84, 4])
 
-    actions = tf.Variable(tf.truncated_normal([l1Neurons, 5], stddev = 0.1))
+    #actions = tf.Variable(tf.truncated_normal([l1Neurons, 5], stddev = 0.1))
 
     W_conv1 = weight_variable([8,8,4,32])
     b_conv1 = bias_variable([32])
@@ -82,7 +82,8 @@ def magic(reward,action,prev_obs,curr_obs):
     b_conv3 = bias_variable([64])
     h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3, 1) + b_conv3)
     print(h_conv3.get_shape)
-    conv_out = tf.reshape(h_conv3, [-1, 84, 84, 64])
+    conv_out = tf.reshape(h_conv3, [-1, 84, 84, 64]) # this is the line that was giving us issues.
+    print(conv_out.get_shape)
 
     w_hidden = weight_variable([451584,512])
     b_hidden = bias_variable([512])
@@ -92,6 +93,10 @@ def magic(reward,action,prev_obs,curr_obs):
     w_output = weight_variable([512,6])
     b_output = bias_variable([6])
     output_net = tf._mat_mul(hidden_out,w_output)+b_output
+    
+    
+    prediction_index, predicted_value = max(enumerate(output_net), key=operator.itemgetter(1))
+    print(prediction_index)
 
     # w_connected = weight_variable()
     # b_connected = bias_variable([512])
