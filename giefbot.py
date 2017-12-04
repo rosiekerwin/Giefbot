@@ -23,23 +23,33 @@ def main():
     env = gym.make('Asteroids-v0')
     observation = env.reset()
     #observation = downsample(observation)
-    reward = 0
+    #reward = 0
     action = 0
-    prev_obs = []
-    curr_obs = [observation]
-    observation, reward, done, info = env.step(action)  # pass in 0 for action
-
     env.render()
-    last4obs = []
-    numSavedInstances = 0
+    prev_obs = []
+    curr_obs = []
+    D = []
     
-    for i in range(1000):
+    for i in range(4):
+        observation, reward, done, info = env.step(action)  # pass in 0 for action
+        observation = convert_to_small_and_grayscale(observation)
         prev_obs = curr_obs
         curr_obs = obsUpdate(curr_obs,observation)
-        action = magic(reward,action,prev_obs,curr_obs)
+        sess = tf.Session()
+        e = [reward, action, prev_obs, curr_obs]
+        D.append(e)
+        action = 0
+   
+    for i in range(1000):
+        
         env.render()
         observation, reward, done, info = env.step(action) # take a random action
         observation = convert_to_small_and_grayscale(observation)
+        e = [reward, action, prev_obs, curr_obs]
+        D.append(e)
+        prev_obs = curr_obs
+        curr_obs = obsUpdate(curr_obs,observation)
+        action = magic(reward,action,prev_obs,curr_obs, sess, False)
         #print(len(observation))
         #observation = downsample(observation)
             
@@ -61,8 +71,7 @@ def bias_variable(shape):
 def conv2d(x, W, st):
   return tf.nn.conv2d(x, W, strides=[1, st, st, 1], padding='SAME')
 
-
-def magic(reward,action,prev_obs,curr_obs):
+def magic(reward,action,prev_obs,curr_obs, sess, t):
     #l1Neurons = 33600
     #build attr tensor
     x = tf.placeholder(tf.float32, shape = [84, 84, 4])
@@ -82,21 +91,24 @@ def magic(reward,action,prev_obs,curr_obs):
     b_conv3 = bias_variable([64])
     h_conv3 = tf.nn.relu(conv2d(h_conv2, W_conv3, 1) + b_conv3)
     print(h_conv3.get_shape)
-    conv_out = tf.reshape(h_conv3, [-1, 84, 84, 64]) # this is the line that was giving us issues.
+    conv_out = tf.reshape(h_conv3, [-1, 11*11*64]) # this is the line that was giving us issues.
     print(conv_out.get_shape)
 
-    w_hidden = weight_variable([451584,512])
+    w_hidden = weight_variable([7744,512])
     b_hidden = bias_variable([512])
     hidden_net = tf.matmul(conv_out,w_hidden)+b_hidden
     hidden_out = tf.nn.relu(hidden_net)
 
     w_output = weight_variable([512,6])
     b_output = bias_variable([6])
-    output_net = tf._mat_mul(hidden_out,w_output)+b_output
-    
-    
-    prediction_index, predicted_value = max(enumerate(output_net), key=operator.itemgetter(1))
+    output_net = tf.matmul(hidden_out,w_output)+b_output
+        
+    if t:
+        sess.run(tf.global_variables_initializer())
+    var = sess.run(output_net, feed_dict={x: curr_obs})
+    prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
     print(prediction_index)
+    return predicted_index
 
     # w_connected = weight_variable()
     # b_connected = bias_variable([512])
