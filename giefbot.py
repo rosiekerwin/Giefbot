@@ -8,6 +8,8 @@ import random as rand
 import operator
 #import cv2
 
+num_actions = 4
+
 # NOTE: RETURNS A SHAPE OF 84x84.
 def convert_to_small_and_grayscale(rgb):
     ret = np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
@@ -18,12 +20,13 @@ def convert_to_small_and_grayscale(rgb):
     ret = np.delete(ret, vert, 1)
     ret = np.delete(ret, horiz, 0)
     ret = np.delete(ret, top, 0)
-    print(ret.shape)
+    #print(ret.shape)
     return ret
 
 def main():
     rand.seed()
-    env = gym.make('Asteroids-v0')
+    #env = gym.make('Asteroids-v0')
+    env = gym.make('Breakout-v0')
     observation = env.reset()
     #observation = downsample(observation)
     #reward = 0
@@ -32,13 +35,13 @@ def main():
     prev_obs = []
     curr_obs = []
     D = []
-    sess, output_net, x, trainer, mask, reward, currentQ, nextQ = initialize()
+    sess, output_net, x, cost, trainer, mask, reward, nextQ = initialize()
     for i in range(4):
-        observation, reward, done, info = env.step(action)  # pass in 0 for action
+        observation, rw, done, info = env.step(action)  # pass in 0 for action
         observation = convert_to_small_and_grayscale(observation)
         prev_obs = curr_obs
         curr_obs = obsUpdate(curr_obs,observation)
-        e = [reward, action, prev_obs, curr_obs]
+        e = [rw, action, prev_obs, curr_obs]
         D.append(e)
         action = 0
         
@@ -47,15 +50,16 @@ def main():
             D.pop()
         action = magic(curr_obs, sess, output_net, x) #change this to just take in curr_obs, sess, and False
         env.render()
-        observation, reward, done, info = env.step(action) # take a random action
+        observation, rw, done, info = env.step(action) # take a random action
+        print(action, rw)
         observation = convert_to_small_and_grayscale(observation)
-        e = [reward, action, prev_obs, curr_obs]
+        e = [rw, action, prev_obs, curr_obs]
         D.append(e)
         prev_obs = curr_obs
         curr_obs = obsUpdate(curr_obs,observation)
-        update_q_function(D, sess, x, trainer, mask, reward, currentQ, nextQ)
+        update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ)
             
-def update_q_function(D, sess, x, trainer, mask, reward, currentQ, nextQ):
+def update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ):
     gamma = 0.99
     T = 4
     indexes = []
@@ -63,14 +67,17 @@ def update_q_function(D, sess, x, trainer, mask, reward, currentQ, nextQ):
         indexes.append(D[rand.randrange(len(D))])
     
     for e in indexes:
-        rt = e[0]
+        rt = [e[0]]
         at = e[1]
         curr_obs = e[2]
         future_obs = e[3]
-        nQ = sess.run(x, feed_dict={x: future_obs})
-        m = [0]*6
+        nQ = sess.run(output_net, feed_dict={x: future_obs})
+        m = [0]*num_actions
         m[at] = 1
-        sess.run(trainer, feed_dict={mask: m, reward: rt, currentQ: curr_obs, nextQ: future_obs})
+        #print(m, rt, curr_obs, future_obs, "****")
+        _, c, p = sess.run([trainer, cost, output_net], feed_dict={mask: m, reward: rt, x: curr_obs, nextQ: nQ[0]})
+        #print(nQ, p)
+        #print(c)
 
 def obsUpdate(curr_obs,new_obs):
     if len(curr_obs) > 3:
@@ -112,26 +119,37 @@ def initialize():
     hidden_net = tf.matmul(conv_out,w_hidden)+b_hidden
     hidden_out = tf.nn.relu(hidden_net)
 
-    w_output = weight_variable([512,6])
-    b_output = bias_variable([6])
+    w_output = weight_variable([512,num_actions])
+    b_output = bias_variable([num_actions])
     output_net = tf.matmul(hidden_out,w_output)+b_output
     
-    currentQ = tf.Variable(tf.constant(0.1, shape=[6]))
-    reward = tf.Variable(tf.constant(0.1, shape=[6]))
-    nextQ = tf.Variable(tf.constant(0.1, shape=[6]))
-    mask = tf.Variable(tf.constant(0.1, shape=[6]))
-    cost = (((mask*reward)+(mask*nextQ))-mask*currentQ)
-    print(type(cost))
+    #currentQ = tf.Variable(tf.constant(0.1, shape=[6]))
+    reward = tf.placeholder(tf.float32, shape = [1])
+    nextQ = tf.placeholder(tf.float32, shape = [num_actions])
+    mask = tf.placeholder(tf.float32, shape = [num_actions])
+    cost = (((mask*reward)+(mask*nextQ))-mask*output_net)
+    #print(type(cost))
     #print(tf.trainable_variables())
-    trainer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
+    trainer = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(cost)
     sess.run(tf.global_variables_initializer())
-    return sess, output_net, x, trainer, mask, reward, currentQ, nextQ
+    return sess, output_net, x, cost, trainer, mask, reward, nextQ
 
 def magic(curr_obs, sess, output_net, x):
-    print(curr_obs)
+    #print(curr_obs)
     var = sess.run(output_net, feed_dict={x: curr_obs})
     prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
-    print(prediction_index)
+    #print(var)
+    
+    
+    #uncomment below to return the randomly predicted actions
+    
+    #r = rand.random()
+    #if r< 0.5:
+    #    vals = list(range(num_actions))
+    #    vals.remove(prediction_index)
+    #    prediction_index = vals[rand.randint(0, len(vals) - 1)]
+        
+    #print(prediction_index)
     return prediction_index
 
 
