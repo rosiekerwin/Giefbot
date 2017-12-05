@@ -31,7 +31,7 @@ def main():
     prev_obs = []
     curr_obs = []
     D = []
-    sess = tf.Session()
+    sess, output_net, x = initialize()
     for i in range(4):
         observation, reward, done, info = env.step(action)  # pass in 0 for action
         observation = convert_to_small_and_grayscale(observation)
@@ -40,12 +40,11 @@ def main():
         e = [reward, action, prev_obs, curr_obs]
         D.append(e)
         action = 0
-    initialize(sess)
-   
+        
     for i in range(1000):
         if (len(D) > 256):
             D.pop()
-        action = magic(curr_obs, sess) #change this to just take in curr_obs, sess, and False
+        action = magic(curr_obs, sess, output_net, x) #change this to just take in curr_obs, sess, and False
         env.render()
         observation, reward, done, info = env.step(action) # take a random action
         observation = convert_to_small_and_grayscale(observation)
@@ -88,9 +87,10 @@ def bias_variable(rshape):
 def conv2d(x, W, st):
   return tf.nn.conv2d(x, W, strides=[1, st, st, 1], padding='SAME')
 
-def initialize(sess):
-    fx = tf.placeholder(tf.float32, shape = [4,84,84])
-    x = tf.reshape(fx, [84, 84, 4])
+def initialize():
+    sess = tf.Session()
+    #fx = tf.placeholder(tf.float32, shape = [4,84,84])
+    x = tf.placeholder(tf.float32, shape = [84,84,4])
 
     W_conv1 = weight_variable([8,8,4,32])
     b_conv1 = bias_variable([32])
@@ -115,16 +115,19 @@ def initialize(sess):
     b_output = bias_variable([6])
     output_net = tf.matmul(hidden_out,w_output)+b_output
     
-    currentQ = tf.placeholder(tf.float32, [6])
-    reward = tf.placeholder(tf.float32, [6])
-    nextQ = tf.placeholder(tf.float32, [6])
-    mask = tf.placeholder(tf.float32, [6])
-    cost = (mask*reward+mask*nextQ-mask*currentQ)**2
+    currentQ = tf.Variable(tf.constant(0.1, shape=[6]))
+    reward = tf.Variable(tf.constant(0.1, shape=[6]))
+    nextQ = tf.Variable(tf.constant(0.1, shape=[6]))
+    mask = tf.Variable(tf.constant(0.1, shape=[6]))
+    cost = (((mask*reward)+(mask*nextQ))-mask*currentQ)
+    print(type(cost))
+    #print(tf.trainable_variables())
     trainer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
     sess.run(tf.global_variables_initializer())
+    return sess, output_net, x
 
-def magic(curr_obs, sess):
-    var, _ = sess.run(output_net, feed_dict={fx: curr_obs})
+def magic(curr_obs, sess, output_net, x):
+    var, _ = sess.run(output_net, feed_dict={x: curr_obs})
     prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
     print(prediction_index)
     return predicted_index,
