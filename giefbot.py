@@ -5,6 +5,7 @@ import tensorflow as tf
 import gym
 import numpy as np
 import random as rand
+import operator
 #import cv2
 
 # NOTE: RETURNS A SHAPE OF 84x84.
@@ -89,8 +90,8 @@ def conv2d(x, W, st):
 
 def initialize():
     sess = tf.Session()
-    #fx = tf.placeholder(tf.float32, shape = [4,84,84])
-    x = tf.placeholder(tf.float32, shape = [84,84,4])
+    x = tf.placeholder(tf.float32, shape = [4,84,84])
+    #x = tf.placeholder(tf.float32, shape = [84,84,4])
 
     W_conv1 = weight_variable([8,8,4,32])
     b_conv1 = bias_variable([32])
@@ -127,10 +128,11 @@ def initialize():
     return sess, output_net, x
 
 def magic(curr_obs, sess, output_net, x):
-    var, _ = sess.run(output_net, feed_dict={x: curr_obs})
+    print(curr_obs)
+    var = sess.run(output_net, feed_dict={x: curr_obs})
     prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
     print(prediction_index)
-    return predicted_index,
+    return prediction_index
 
 
 
