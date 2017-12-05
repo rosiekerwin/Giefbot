@@ -32,7 +32,7 @@ def main():
     prev_obs = []
     curr_obs = []
     D = []
-    sess, output_net, x = initialize()
+    sess, output_net, x, trainer, mask, reward, currentQ, nextQ = initialize()
     for i in range(4):
         observation, reward, done, info = env.step(action)  # pass in 0 for action
         observation = convert_to_small_and_grayscale(observation)
@@ -53,14 +53,14 @@ def main():
         D.append(e)
         prev_obs = curr_obs
         curr_obs = obsUpdate(curr_obs,observation)
-        update_q_function(D, sess)
+        update_q_function(D, sess, x, trainer, mask, reward, currentQ, nextQ)
             
-def update_q_function(D, sess):
+def update_q_function(D, sess, x, trainer, mask, reward, currentQ, nextQ):
     gamma = 0.99
     T = 4
     indexes = []
     for _ in range(T):
-        indexes.append(rand.randrange(len(D)))
+        indexes.append(D[rand.randrange(len(D))])
     
     for e in indexes:
         rt = e[0]
@@ -125,7 +125,7 @@ def initialize():
     #print(tf.trainable_variables())
     trainer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(cost)
     sess.run(tf.global_variables_initializer())
-    return sess, output_net, x
+    return sess, output_net, x, trainer, mask, reward, currentQ, nextQ
 
 def magic(curr_obs, sess, output_net, x):
     print(curr_obs)
