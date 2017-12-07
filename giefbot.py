@@ -35,6 +35,8 @@ def main():
     prev_obs = []
     curr_obs = []
     D = []
+    step = 0
+    rate = 1
     sess, output_net, x, cost, trainer, mask, reward, nextQ = initialize()
     for i in range(4):
         observation, rw, done, info = env.step(action)  # pass in 0 for action
@@ -45,10 +47,15 @@ def main():
         D.append(e)
         action = 0
         
-    for i in range(1000):
+    while True:
+        step +=1
+        if done:
+            observation = env.reset()
         if (len(D) > 256):
             D.pop()
-        action = magic(curr_obs, sess, output_net, x) #change this to just take in curr_obs, sess, and False
+        if step % 100 == 0:
+            rate = rate / 2
+        action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
         env.render()
         observation, rw, done, info = env.step(action) # take a random action
         print(action, rw)
@@ -58,7 +65,17 @@ def main():
         prev_obs = curr_obs
         curr_obs = obsUpdate(curr_obs,observation)
         update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ)
-            
+
+def save(sess):
+    saver = tf.train.Saver()
+    save_path = saver.save(sess, "/model/aster.ckpt")
+    print("Model saved in file: %s" % save_path)
+
+def load(sess, save_path):
+    saver = tf.train.Saver()
+    saver.restore(sess, save_path)
+    print("Model restored.")
+
 def update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ):
     gamma = 0.99
     T = 4
@@ -72,10 +89,11 @@ def update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ
         curr_obs = e[2]
         future_obs = e[3]
         nQ = sess.run(output_net, feed_dict={x: future_obs})
+        nQ = [np.max(nQ)]
         m = [0]*num_actions
         m[at] = 1
         #print(m, rt, curr_obs, future_obs, "****")
-        _, c, p = sess.run([trainer, cost, output_net], feed_dict={mask: m, reward: rt, x: curr_obs, nextQ: nQ[0]})
+        _, c, p = sess.run([trainer, cost, output_net], feed_dict={mask: m, reward: rt, x: curr_obs, nextQ: nQ})
         #print(nQ, p)
         #print(c)
 
@@ -125,7 +143,7 @@ def initialize():
     
     #currentQ = tf.Variable(tf.constant(0.1, shape=[6]))
     reward = tf.placeholder(tf.float32, shape = [1])
-    nextQ = tf.placeholder(tf.float32, shape = [num_actions])
+    nextQ = tf.placeholder(tf.float32, shape = [1])
     mask = tf.placeholder(tf.float32, shape = [num_actions])
     cost = (((mask*reward)+(mask*nextQ))-mask*output_net)
     #print(type(cost))
@@ -134,20 +152,18 @@ def initialize():
     sess.run(tf.global_variables_initializer())
     return sess, output_net, x, cost, trainer, mask, reward, nextQ
 
-def magic(curr_obs, sess, output_net, x):
-    #print(curr_obs)
+def magic(curr_obs, sess, output_net, x,step,rate):
     var = sess.run(output_net, feed_dict={x: curr_obs})
     prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
     #print(var)
     
     
     #uncomment below to return the randomly predicted actions
-    
-    #r = rand.random()
-    #if r< 0.5:
-    #    vals = list(range(num_actions))
-    #    vals.remove(prediction_index)
-    #    prediction_index = vals[rand.randint(0, len(vals) - 1)]
+    r = rand.random()
+    if r< rate:
+       vals = list(range(num_actions))
+       vals.remove(prediction_index)
+       prediction_index = vals[rand.randint(0, len(vals) - 1)]
         
     #print(prediction_index)
     return prediction_index
