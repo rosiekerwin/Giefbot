@@ -64,7 +64,7 @@ def main():
         action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
         env.render()
         observation, rw, done, info = env.step(action) # take a random action
-        print(action, rw, step)
+        #print(action, rw, step)
         observation = convert_to_small_and_grayscale(observation)
         e = [rw, action, copy.deepcopy(prev_obs), copy.deepcopy(curr_obs)]
         D.append(e)
@@ -104,10 +104,19 @@ def update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ
         #print(c)
 
 def obsUpdate(curr_obs,new_obs):
-    if len(curr_obs) > 0 and len(curr_obs[0][0]) > 3:
-        for i in curr_obs:
-            for j in curr_obs[i]:
-                j.pop()
+    if (len(curr_obs) == 0):
+        curr_obs = [[None]*84]*84
+        for i in range(len(curr_obs)):
+            for j in range(len(curr_obs[i])):
+                item = [copy.deepcopy(new_obs[i][j])]
+                curr_obs[i][j] = item
+        return curr_obs
+    
+    if len(curr_obs[0][0]) > 4:
+        for i in range(len(curr_obs)):
+            for j in range(len(curr_obs[i])):
+                curr_obs[i][j].pop()
+    
     for i in range(len(curr_obs)):
         for j in range(len(curr_obs[i])):
             curr_obs[i][j].insert(0,new_obs[i][j])
@@ -163,7 +172,7 @@ def initialize():
     return sess, output_net, x, cost, trainer, mask, reward, nextQ
 
 def magic(curr_obs, sess, output_net, x,step,rate):
-    print(curr_obs)
+    #print(curr_obs)
     var = sess.run(output_net, feed_dict={x: curr_obs})
     prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
     #print(var, prediction_index)
