@@ -55,7 +55,7 @@ def main():
             observation = env.reset()
         if (len(D) > 256):
             D.pop()
-        if step % 100 == 0:
+        if step % 1000 == 0:
             rate = rate / 2
         action = magic(curr_obs, sess, step,rate, isFirst) #change this to just take in curr_obs, sess, and False
         env.render()
