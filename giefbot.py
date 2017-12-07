@@ -27,6 +27,8 @@ def main():
     rand.seed()
     #env = gym.make('Asteroids-v0')
     env = gym.make('Breakout-v0')
+    num_actions = env.action_space.n
+    print(num_actions)
     observation = env.reset()
     #observation = downsample(observation)
     #reward = 0
@@ -53,12 +55,12 @@ def main():
             observation = env.reset()
         if (len(D) > 256):
             D.pop()
-        if step % 1000 == 0:
+        if step % 100 == 0:
             rate = rate / 2
         action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
         env.render()
         observation, rw, done, info = env.step(action) # take a random action
-        print(action, rw)
+        print(action, rw, step)
         observation = convert_to_small_and_grayscale(observation)
         e = [rw, action, prev_obs, curr_obs]
         D.append(e)
@@ -155,7 +157,7 @@ def initialize():
 def magic(curr_obs, sess, output_net, x,step,rate):
     var = sess.run(output_net, feed_dict={x: curr_obs})
     prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
-    #print(var)
+    #print(var, prediction_index)
     
     
     #uncomment below to return the randomly predicted actions
