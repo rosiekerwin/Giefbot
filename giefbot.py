@@ -6,6 +6,7 @@ import gym
 import numpy as np
 import random as rand
 import operator
+import copy
 #import cv2
 
 num_actions = 4
@@ -20,6 +21,9 @@ def convert_to_small_and_grayscale(rgb):
     ret = np.delete(ret, vert, 1)
     ret = np.delete(ret, horiz, 0)
     ret = np.delete(ret, top, 0)
+    
+    
+    
     #print(ret.shape)
     return ret
 
@@ -43,9 +47,9 @@ def main():
     for i in range(4):
         observation, rw, done, info = env.step(action)  # pass in 0 for action
         observation = convert_to_small_and_grayscale(observation)
-        prev_obs = curr_obs
+        prev_obs = copy.deepcopy(curr_obs)
         curr_obs = obsUpdate(curr_obs,observation)
-        e = [rw, action, prev_obs, curr_obs]
+        e = [rw, action, copy.deepcopy(prev_obs), copy.deepcopy(curr_obs)]
         D.append(e)
         action = 0
         
@@ -62,9 +66,9 @@ def main():
         observation, rw, done, info = env.step(action) # take a random action
         print(action, rw, step)
         observation = convert_to_small_and_grayscale(observation)
-        e = [rw, action, prev_obs, curr_obs]
+        e = [rw, action, copy.deepcopy(prev_obs), copy.deepcopy(curr_obs)]
         D.append(e)
-        prev_obs = curr_obs
+        prev_obs = copy.deepcopy(curr_obs)
         curr_obs = obsUpdate(curr_obs,observation)
         update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ)
 
@@ -100,9 +104,13 @@ def update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ
         #print(c)
 
 def obsUpdate(curr_obs,new_obs):
-    if len(curr_obs) > 3:
-        curr_obs.pop()
-    curr_obs.insert(0,new_obs)
+    if len(curr_obs) > 0 and len(curr_obs[0][0]) > 3:
+        for i in curr_obs:
+            for j in curr_obs[i]:
+                j.pop()
+    for i in range(len(curr_obs)):
+        for j in range(len(curr_obs[i])):
+            curr_obs[i][j].insert(0,new_obs[i][j])
     return curr_obs
 
 def weight_variable(shape):
@@ -117,8 +125,8 @@ def conv2d(x, W, st):
 
 def initialize():
     sess = tf.Session()
-    x = tf.placeholder(tf.float32, shape = [4,84,84])
-    #x = tf.placeholder(tf.float32, shape = [84,84,4])
+    #x = tf.placeholder(tf.float32, shape = [4,84,84])
+    x = tf.placeholder(tf.float32, shape = [84,84,4])
 
     W_conv1 = weight_variable([8,8,4,32])
     b_conv1 = bias_variable([32])
@@ -155,6 +163,7 @@ def initialize():
     return sess, output_net, x, cost, trainer, mask, reward, nextQ
 
 def magic(curr_obs, sess, output_net, x,step,rate):
+    print(curr_obs)
     var = sess.run(output_net, feed_dict={x: curr_obs})
     prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
     #print(var, prediction_index)
