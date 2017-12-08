@@ -63,16 +63,17 @@ def main():
             rate = rate / 2
         if step % 1000 == 0:
             save(sess)
-        action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
+        #action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
+        action = env.action_space.sample()
         env.render()
         observation, rw, done, info = env.step(action) # take a random action
         #print(action, rw, step)
         observation = convert_to_small_and_grayscale(observation)
         e = [rw, action, deepcopy(prev_obs), deepcopy(curr_obs)]
         D.append(e)
-        prev_obs = deepcopy(curr_obs)
-        curr_obs = obsUpdate(curr_obs,observation)
-        update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ)
+        #prev_obs = deepcopy(curr_obs)
+        #curr_obs = obsUpdate(curr_obs,observation)
+        #update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ)
 
 def save(sess):
     saver = tf.train.Saver()
@@ -112,12 +113,13 @@ def obsUpdate(curr_obs,new_obs):
         curr_obs = [[None]*84]*84
         for i in range(len(curr_obs)):
             for j in range(len(curr_obs[i])):
-                item = [deepcopy(new_obs[i][j])]
+                item = []
+                item.append(deepcopy(new_obs[i][j]))
                 #print(item)
                 curr_obs[i][j] = item
         #print(len(curr_obs[1][2]), len(curr_obs[1]))
         return curr_obs
-    
+    print(curr_obs[2][12])
     if len(curr_obs[0][0]) > 3:
         print("deleting 1 screen")
         for i in range(len(curr_obs)):
@@ -125,10 +127,11 @@ def obsUpdate(curr_obs,new_obs):
                 curr_obs[i][j].pop()
     
     print(curr_obs[2][12], new_obs[2][12])
-    print(type(new_obs[2][12]))
+    print(type(new_obs[2][12]), type(curr_obs[2][12][0]))
     for i in range(len(curr_obs)):
         for j in range(len(curr_obs[i])):
-            curr_obs[i][j].insert(0, deepcopy(new_obs[i][j]))
+            item = deepcopy(new_obs[i][j])
+            curr_obs[i][j].insert(0, item)
     print(curr_obs[2][12])
     return curr_obs
 
