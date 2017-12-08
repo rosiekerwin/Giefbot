@@ -29,8 +29,8 @@ def convert_to_small_and_grayscale(rgb):
 
 def main():
     rand.seed()
-    #env = gym.make('Asteroids-v0')
-    env = gym.make('Breakout-v0')
+    env = gym.make('Asteroids-v0')
+    #env = gym.make('Breakout-v0')
     num_actions = env.action_space.n
     print(num_actions)
     observation = env.reset()
@@ -49,10 +49,31 @@ def main():
         observation = convert_to_small_and_grayscale(observation)
         prev_obs = deepcopy(curr_obs)
         curr_obs = obsUpdate(curr_obs,observation)
+        #e = [rw, action, deepcopy(prev_obs), deepcopy(curr_obs)]
+        #D.append(e)
+        action = 0
+
+    for _ in range(10):
+        step +=1
+        if done:
+            observation = env.reset()
+        if (len(D) > 256):
+            D.pop()
+        if step % 100 == 0:
+            rate = rate / 2
+        #if step % 1000 == 0:
+            #save(sess)
+        action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
+        #action = env.action_space.sample()
+        env.render()
+        observation, rw, done, info = env.step(action) # take a random action
+        #print(action, rw, step)
+        observation = convert_to_small_and_grayscale(observation)
         e = [rw, action, deepcopy(prev_obs), deepcopy(curr_obs)]
         D.append(e)
-        action = 0
-        
+        prev_obs = deepcopy(curr_obs)
+        curr_obs = obsUpdate(curr_obs,observation)
+
     while True:
         step +=1
         if done:
@@ -61,9 +82,10 @@ def main():
             D.pop()
         if step % 100 == 0:
             rate = rate / 2
-        if step % 1000 == 0:
-            save(sess)
+        #if step % 1000 == 0:
+            #save(sess)
         action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
+        #action = env.action_space.sample()
         env.render()
         observation, rw, done, info = env.step(action) # take a random action
         #print(action, rw, step)
@@ -106,30 +128,39 @@ def update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ
         #print(c)
 
 def obsUpdate(curr_obs,new_obs):
-    print("STARTING OBSUPDATE")
+    #print("STARTING OBSUPDATE")
     if (len(curr_obs) == 0):
-        print("MAKING NEW CURR_OBS OBJECT")
-        curr_obs = [[None]*84]*84
+        #print("MAKING NEW CURR_OBS OBJECT")
+        curr_obs = []
+        for x in range(84):
+            curr_obs.append([])
+            for y in range(84):
+                curr_obs[x].append([])
         for i in range(len(curr_obs)):
             for j in range(len(curr_obs[i])):
-                item = [deepcopy(new_obs[i][j])]
+                item = []
+                item.append(deepcopy(new_obs[i][j]))
                 #print(item)
                 curr_obs[i][j] = item
         #print(len(curr_obs[1][2]), len(curr_obs[1]))
         return curr_obs
-    
+    #print(len(curr_obs[2][12]), curr_obs[2][12])
     if len(curr_obs[0][0]) > 3:
-        print("deleting 1 screen")
+        #print("deleting 1 screen")
         for i in range(len(curr_obs)):
             for j in range(len(curr_obs[i])):
                 curr_obs[i][j].pop()
     
-    print(curr_obs[2][12], new_obs[2][12])
-    print(type(new_obs[2][12]))
+    #print(len(curr_obs[2][12]), curr_obs[2][12], new_obs[2][12])
+    #print(type(new_obs[2][12]), type(curr_obs[2][12][0]))
+    #print(new_obs.shape)
     for i in range(len(curr_obs)):
         for j in range(len(curr_obs[i])):
-            curr_obs[i][j].insert(0, deepcopy(new_obs[i][j]))
-    print(curr_obs[2][12])
+            item = new_obs[i][j]
+            #print(item)
+            
+            curr_obs[i][j].insert(0, item)
+    #print(len(curr_obs[2][12]), curr_obs[2][12])
     return curr_obs
 
 def weight_variable(shape):
