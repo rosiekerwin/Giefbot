@@ -29,8 +29,8 @@ def convert_to_small_and_grayscale(rgb):
 
 def main():
     rand.seed()
-    env = gym.make('Asteroids-v0')
-    #env = gym.make('Breakout-v0')
+    #env = gym.make('Asteroids-v0')
+    env = gym.make('Breakout-v0')
     num_actions = env.action_space.n
     print(num_actions)
     observation = env.reset()
@@ -44,7 +44,7 @@ def main():
     step = 0
     rate = 1
     sess, output_net, x, cost, trainer, mask, reward, nextQ = initialize()
-    for i in range(4):
+    for i in range(5):
         observation, rw, done, info = env.step(action)  # pass in 0 for action
         observation = convert_to_small_and_grayscale(observation)
         prev_obs = deepcopy(curr_obs)
@@ -52,9 +52,11 @@ def main():
         #e = [rw, action, deepcopy(prev_obs), deepcopy(curr_obs)]
         #D.append(e)
         action = 0
-
+        #print(i)
+    print("Entering mini-loop")
     for _ in range(10):
         step +=1
+        #print(step)
         if done:
             observation = env.reset()
         if (len(D) > 256):
@@ -73,15 +75,17 @@ def main():
         D.append(e)
         prev_obs = deepcopy(curr_obs)
         curr_obs = obsUpdate(curr_obs,observation)
-
+    print("Entering full loop")
     while True:
         step +=1
+        #print(step)
         if done:
             observation = env.reset()
         if (len(D) > 256):
             D.pop()
         if step % 100 == 0:
             rate = rate / 2
+            print(step)
         #if step % 1000 == 0:
             #save(sess)
         action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
@@ -176,7 +180,7 @@ def conv2d(x, W, st):
 def initialize():
     sess = tf.Session()
     #x = tf.placeholder(tf.float32, shape = [4,84,84])
-    x = tf.placeholder(tf.float32, shape = [84,84,4])
+    x = tf.placeholder(tf.float32, shape = [84,84,4], name="insert")
 
     W_conv1 = weight_variable([8,8,4,32])
     b_conv1 = bias_variable([32])
