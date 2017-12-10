@@ -59,3 +59,11 @@ test.py
 tox.ini
 unittest.cfg
 vendor/
+
+*.data-00000-of-00001
+
+model/aster.ckpt.index
+
+model/aster.ckpt.meta
+
+model/checkpoint
