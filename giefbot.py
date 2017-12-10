@@ -61,7 +61,7 @@ def main():
             observation = env.reset()
         if (len(D) > 256):
             D.pop()
-        if step % 100 == 0:
+        if step % 1000 == 0:
             rate = rate / 2
         #if step % 1000 == 0:
             #save(sess)
@@ -81,11 +81,14 @@ def main():
         #print(step)
         if done:
             observation = env.reset()
-        if (len(D) > 256):
+        if (len(D) > 500):
             D.pop()
         if step % 100 == 0:
+            print(step,"steps have passed")
+            save(sess)
+        if step % 1000 == 0:
             rate = rate / 2
-            print(step)
+            #print(step,"steps have passed")
         #if step % 1000 == 0:
             #save(sess)
         action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
@@ -102,12 +105,12 @@ def main():
 
 def save(sess):
     saver = tf.train.Saver()
-    save_path = saver.save(sess, "/model/aster.ckpt")
+    save_path = saver.save(sess, "./model/aster.ckpt")
     print("Model saved in file: %s" % save_path)
 
 def load(sess, save_path):
     saver = tf.train.Saver()
-    saver.restore(sess, save_path)
+    saver.restore(sess, "./model/aster.ckpt")
     print("Model restored.")
 
 def update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ):
@@ -219,13 +222,14 @@ def initialize():
 def magic(curr_obs, sess, output_net, x,step,rate):
     #print(curr_obs)
     var = sess.run(output_net, feed_dict={x: curr_obs})
-    prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
+    #prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
+    prediction_index = np.argmax(var)
     #print(var, prediction_index)
     
     
     #uncomment below to return the randomly predicted actions
     r = rand.random()
-    if r< rate:
+    if r < rate:
        vals = list(range(num_actions))
        vals.remove(prediction_index)
        prediction_index = vals[rand.randint(0, len(vals) - 1)]
