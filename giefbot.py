@@ -44,6 +44,8 @@ def main():
     step = 0
     rate = 1
     sess, output_net, x, cost, trainer, mask, reward, nextQ = initialize()
+    #load(sess)
+    startPrinting = False
     for i in range(5):
         observation, rw, done, info = env.step(action)  # pass in 0 for action
         observation = convert_to_small_and_grayscale(observation)
@@ -65,7 +67,7 @@ def main():
             rate = rate / 2
         #if step % 1000 == 0:
             #save(sess)
-        action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
+        action = magic(curr_obs, sess, output_net, x,step,rate, False) #change this to just take in curr_obs, sess, and False
         #action = env.action_space.sample()
         env.render()
         observation, rw, done, info = env.step(action) # take a random action
@@ -78,6 +80,7 @@ def main():
     print("Entering full loop")
     while True:
         step +=1
+        
         #print(step)
         if done:
             observation = env.reset()
@@ -86,12 +89,13 @@ def main():
         if step % 100 == 0:
             print(step,"steps have passed")
             save(sess)
-        if step % 1000 == 0:
+        if step % 100 == 0:
             rate = rate / 2
+            startPrinting = True
             #print(step,"steps have passed")
         #if step % 1000 == 0:
             #save(sess)
-        action = magic(curr_obs, sess, output_net, x,step,rate) #change this to just take in curr_obs, sess, and False
+        action = magic(curr_obs, sess, output_net, x,step,rate, startPrinting) #change this to just take in curr_obs, sess, and False
         #action = env.action_space.sample()
         env.render()
         observation, rw, done, info = env.step(action) # take a random action
@@ -108,7 +112,7 @@ def save(sess):
     save_path = saver.save(sess, "./model/aster.ckpt")
     print("Model saved in file: %s" % save_path)
 
-def load(sess, save_path):
+def load(sess):
     saver = tf.train.Saver()
     saver.restore(sess, "./model/aster.ckpt")
     print("Model restored.")
@@ -130,7 +134,8 @@ def update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ
         m = [0]*num_actions
         m[at] = 1
         #print(m, rt, curr_obs, future_obs, "****")
-        _, c, p = sess.run([trainer, cost, output_net], feed_dict={mask: m, reward: rt, x: curr_obs, nextQ: nQ})
+        #_, c, p = sess.run([trainer, cost, output_net], feed_dict={mask: m, reward: rt, x: curr_obs, nextQ: nQ})
+        _ = sess.run([trainer], feed_dict={mask: m, reward: rt, x: curr_obs, nextQ: nQ})
         #print(nQ, p)
         #print(c)
 
@@ -212,14 +217,14 @@ def initialize():
     reward = tf.placeholder(tf.float32, shape = [1])
     nextQ = tf.placeholder(tf.float32, shape = [1])
     mask = tf.placeholder(tf.float32, shape = [num_actions])
-    cost = (((mask*reward)+(mask*nextQ))-mask*output_net)
+    cost = (((mask*reward)+(mask*nextQ))-mask*output_net)**2
     #print(type(cost))
     #print(tf.trainable_variables())
     trainer = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(cost)
     sess.run(tf.global_variables_initializer())
     return sess, output_net, x, cost, trainer, mask, reward, nextQ
 
-def magic(curr_obs, sess, output_net, x,step,rate):
+def magic(curr_obs, sess, output_net, x,step,rate, startPrinting):
     #print(curr_obs)
     var = sess.run(output_net, feed_dict={x: curr_obs})
     #prediction_index, predicted_value = max(enumerate(var), key=operator.itemgetter(1))
@@ -230,9 +235,16 @@ def magic(curr_obs, sess, output_net, x,step,rate):
     #uncomment below to return the randomly predicted actions
     r = rand.random()
     if r < rate:
-       vals = list(range(num_actions))
-       vals.remove(prediction_index)
-       prediction_index = vals[rand.randint(0, len(vals) - 1)]
+        vals = list(range(num_actions))
+        vals.remove(prediction_index)
+        prediction_index = vals[rand.randint(0, len(vals) - 1)]
+        if startPrinting:
+            print("Random action chosen: ", prediction_index)
+            print(var)
+    else:
+        if startPrinting:
+            print("Networked action chosen: ", prediction_index)
+            print(var)
         
     #print(prediction_index)
     return prediction_index
