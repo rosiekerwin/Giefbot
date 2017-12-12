@@ -7,6 +7,7 @@ import numpy as np
 import random as rand
 import operator
 from copy import deepcopy
+import os
 #import cv2
 
 num_actions = 4
@@ -44,7 +45,7 @@ def main():
     step = 0
     rate = 1
     sess, output_net, x, cost, trainer, mask, reward, nextQ = initialize()
-    #load(sess)
+    load(sess)
     startPrinting = False
     for i in range(5):
         observation, rw, done, info = env.step(action)  # pass in 0 for action
@@ -53,7 +54,7 @@ def main():
         curr_obs = obsUpdate(curr_obs,observation)
         #e = [rw, action, deepcopy(prev_obs), deepcopy(curr_obs)]
         #D.append(e)
-        action = 0
+        action = 1
         #print(i)
     print("Entering mini-loop")
     for _ in range(10):
@@ -65,6 +66,8 @@ def main():
             D.pop()
         if step % 1000 == 0:
             rate = rate / 2
+            if (rate < 0.05):
+                rate=0.05
         #if step % 1000 == 0:
             #save(sess)
         action = magic(curr_obs, sess, output_net, x,step,rate, False) #change this to just take in curr_obs, sess, and False
@@ -88,10 +91,12 @@ def main():
             D.pop()
         if step % 100 == 0:
             print(step,"steps have passed")
-            save(sess)
+            save(sess, step)
         if step % 100 == 0:
             rate = rate / 2
             startPrinting = True
+            if (rate < 0.05):
+                rate=0.05
             #print(step,"steps have passed")
         #if step % 1000 == 0:
             #save(sess)
@@ -102,14 +107,16 @@ def main():
         #print(action, rw, step)
         observation = convert_to_small_and_grayscale(observation)
         e = [rw, action, deepcopy(prev_obs), deepcopy(curr_obs)]
-        D.append(e)
+        D.insert(0,e)
         prev_obs = deepcopy(curr_obs)
         curr_obs = obsUpdate(curr_obs,observation)
         update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ)
 
-def save(sess):
+def save(sess, steps):
     saver = tf.train.Saver()
+    
     save_path = saver.save(sess, "./model/aster.ckpt")
+
     print("Model saved in file: %s" % save_path)
 
 def load(sess):
