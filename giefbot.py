@@ -217,7 +217,7 @@ def initialize():
     reward = tf.placeholder(tf.float32, shape = [1])
     nextQ = tf.placeholder(tf.float32, shape = [1])
     mask = tf.placeholder(tf.float32, shape = [num_actions])
-    cost = (((mask*reward)+(mask*nextQ))-mask*output_net)**2
+    cost = (((mask*reward)+(0.99*(mask*nextQ)))-mask*output_net)**2
     #print(type(cost))
     #print(tf.trainable_variables())
     trainer = tf.train.AdamOptimizer(learning_rate=0.0001).minimize(cost)
