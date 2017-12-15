@@ -8,6 +8,7 @@ import random as rand
 import operator
 from copy import deepcopy
 import os
+from laplotter import LossAccPlotter
 #import cv2
 
 num_actions = 4
@@ -33,11 +34,18 @@ def main():
     #env = gym.make('Asteroids-v0')
     env = gym.make('Breakout-v0')
     num_actions = env.action_space.n
-    print(num_actions)
+    #print(num_actions)
+    
+    plotter = LossAccPlotter(title="mem256_perGame",show_acc_plot=True,save_to_filepath="/mem256_perGame.png",show_loss_plot=False)
+    plotter2 = LossAccPlotter(title="mem256_100",show_acc_plot=True,save_to_filepath="/mem256_100.png",show_loss_plot=False)
+    #plotter.save_plot("./mem256.png")
+    
     observation = env.reset()
     #observation = downsample(observation)
     #reward = 0
     action = 0
+    total_reward = 0
+    total_reward2 = 0
     env.render()
     prev_obs = []
     curr_obs = []
@@ -45,7 +53,7 @@ def main():
     step = 0
     rate = 1
     sess, output_net, x, cost, trainer, mask, reward, nextQ = initialize()
-    load(sess)
+    #load(sess)
     startPrinting = False
     for i in range(5):
         observation, rw, done, info = env.step(action)  # pass in 0 for action
@@ -81,25 +89,33 @@ def main():
         prev_obs = deepcopy(curr_obs)
         curr_obs = obsUpdate(curr_obs,observation)
     print("Entering full loop")
-    while True:
+    while step < 10001:
         step +=1
         
         #print(step)
         if done:
+            print("saving to plot....")
+            plot_reward = total_reward
+            plotter.add_values(step, acc_train=plot_reward)
+            total_reward = 0
             observation = env.reset()
-        if (len(D) > 500):
+        if (len(D) > 256):
             D.pop()
         if step % 100 == 0:
             print(step,"steps have passed")
             save(sess, step)
-        if step % 100 == 0:
             rate = rate / 2
             startPrinting = True
             if (rate < 0.05):
                 rate=0.05
+            print("saving to plot2....")
+            plot_reward = total_reward2/100
+            plotter2.add_values(step, acc_train=plot_reward)
+            total_reward2 = 0
             #print(step,"steps have passed")
-        #if step % 1000 == 0:
-            #save(sess)
+        if step % 500 == 0:
+            plotter.save_plot("./mem256_perGame.png")
+            plotter2.save_plot("./mem256_100.png")
         action = magic(curr_obs, sess, output_net, x,step,rate, startPrinting) #change this to just take in curr_obs, sess, and False
         #action = env.action_space.sample()
         env.render()
@@ -111,6 +127,10 @@ def main():
         prev_obs = deepcopy(curr_obs)
         curr_obs = obsUpdate(curr_obs,observation)
         update_q_function(D, sess, output_net, x, cost, trainer, mask, reward, nextQ)
+        total_reward = total_reward + rw
+        total_reward2 = total_reward2 + rw
+    plotter.block()
+    plotter2.block()
 
 def save(sess, steps):
     saver = tf.train.Saver()

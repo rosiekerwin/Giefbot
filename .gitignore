@@ -67,3 +67,25 @@ model/aster.ckpt.index
 model/aster.ckpt.meta
 
 model/checkpoint
+
+*.index
+
+*.meta
+
+model/10100Steps SUCCESS/checkpoint
+
+model/1stmodelPong/checkpoint
+
+model/6thmodel/checkpoint
+
+model/3rdmodel/checkpoint
+
+model/4thmodel/checkpoint
+
+model/5200Steps/checkpoint
+
+model/5thmodel/checkpoint
+
+model/7thmodel SUCCESS/checkpoint
+
+model/firstModel/checkpoint
